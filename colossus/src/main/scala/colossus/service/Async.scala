@@ -1,9 +1,13 @@
 package colossus.service
 
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 import scala.language.higherKinds
 import colossus.IOSystem
 import colossus.core.WorkerRef
+import colossus.metrics.logging.ColossusLogging
+
+import scala.concurrent.duration.FiniteDuration
+import scala.util.Success
 
 /**
   * A Sender is anything that is able to asynchronously send a request and
@@ -36,6 +40,11 @@ trait Async[M[_]] {
 
   def failure[T](ex: Throwable): M[T]
 
+  def recoverWith[T, U >: T](t: M[T])(p: PartialFunction[Throwable, M[U]]): M[U]
+
+  def delay[T](delay: FiniteDuration)(block: => M[T]): M[T]
+
+  def execute[T](t: M[T]): Unit
 }
 
 /**
@@ -71,9 +80,17 @@ object CallbackAsync extends Async[Callback] {
   def success[T](t: T): Callback[T] = Callback.successful(t)
 
   def failure[T](ex: Throwable): Callback[T] = Callback.failed(ex)
+
+  def recoverWith[T, U >: T](t: Callback[T])(p: PartialFunction[Throwable, Callback[U]]): Callback[U] = t.recoverWith(p)
+
+  def delay[T](delay: FiniteDuration)(block: => Callback[T]): Callback[T] = ???
+
+  override def execute[T](t: Callback[T]): Unit = {
+    t.execute()
+  }
 }
 
-class FutureAsync(implicit val environment: IOSystem) extends Async[Future] {
+class FutureAsync(implicit val environment: IOSystem) extends Async[Future] with ColossusLogging {
 
   type E = IOSystem
 
@@ -86,4 +103,24 @@ class FutureAsync(implicit val environment: IOSystem) extends Async[Future] {
   def success[T](t: T): Future[T] = Future.successful(t)
 
   def failure[T](ex: Throwable): Future[T] = Future.failed(ex)
+
+  def recoverWith[T, U >: T](t: Future[T])(p: PartialFunction[Throwable, Future[U]]): Future[U] = t.recoverWith(p)
+
+  def delay[T](delay: FiniteDuration)(block: => Future[T]): Future[T] = {
+    val promise = Promise[T]
+    info(s"Delaying $delay")
+    environment.actorSystem.scheduler.scheduleOnce(delay) {
+      try {
+        info(s"Delaying finished")
+        flatMap(block)(t => promise.complete(Success(t)).future)
+      } catch {
+        case t: Throwable => promise.failure(t)
+      }
+    }
+    promise.future
+  }
+
+  override def execute[T](t: Future[T]): Unit = {
+    Unit
+  }
 }

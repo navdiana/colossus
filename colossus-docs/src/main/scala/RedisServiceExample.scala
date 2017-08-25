@@ -21,7 +21,7 @@ object RedisServiceExample extends App {
         override def handle: PartialHandler[Redis] = {
           case Command("GET", args) =>
             args match {
-              case head :: _ =>
+              case head +: _ =>
                 Option(db.get(head.utf8String)) match {
                   case Some(value) => Callback.successful(BulkReply(ByteString(value)))
                   case None => Callback.successful(NilReply)
@@ -32,11 +32,16 @@ object RedisServiceExample extends App {
 
           case Command("SET", args) =>
             args match {
-              case key :: value :: _ =>
+              case key +: value +: _ =>
+                Thread.sleep(10000)
                 db.put(key.utf8String, value.utf8String)
                 Callback.successful(StatusReply("OK"))
               case Nil =>
                 Callback.successful(ErrorReply("ERR wrong number of arguments for 'set' command"))
+              case other =>
+
+                println(s"GOT $other")
+                Callback.successful(ErrorReply("OPPPS"))
             }
         }
       }

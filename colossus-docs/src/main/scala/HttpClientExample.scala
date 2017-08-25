@@ -1,9 +1,8 @@
 import akka.actor.ActorSystem
 import colossus.IOSystem
-import colossus.protocols.http.{Http, HttpRequest}
+import colossus.protocols.http.{Http, HttpClient, HttpRequest, HttpServer, Initializer, RequestHandler}
 import colossus.protocols.http.HttpMethod.Get
 import colossus.protocols.http.UrlParsing.{Root, on}
-import colossus.protocols.http.{HttpServer, Initializer, RequestHandler}
 import colossus.service.GenRequestHandler.PartialHandler
 
 object HttpClientExample extends App {

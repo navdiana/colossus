@@ -510,7 +510,7 @@ class CallbackPromise[T] {
  * sent to that trait on the completion of the converted Future, containing the
  * code for any `map` or `flatMap` that occurs on the callback.
  */
-private[colossus] case class CallbackExec(cb: () => Unit, in: Option[FiniteDuration] = None) {
+ case class CallbackExec(cb: () => Unit, in: Option[FiniteDuration] = None) {
   def execute() {
     cb()
   }

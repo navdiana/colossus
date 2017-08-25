@@ -135,6 +135,9 @@ lazy val ColossusDocs = Project(id = "colossus-docs", base = file("colossus-docs
     paradoxProperties ++= Map(
       "extref.docs.base_url" -> s"https://static.javadoc.io/${organization.value}/colossus_2.11/${version.value}/index.html#%s",
       "snip.examples.base_dir" -> "../scala" 
+    ),
+    libraryDependencies ++= Seq(
+      "ch.qos.logback" % "logback-classic" % "1.2.2"
     )
   )
   .configs(IntegrationTest)
